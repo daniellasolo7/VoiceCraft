@@ -23,6 +23,11 @@ class Trainer:
     def __init__(self, args, world_size, rank):
         self.start_time = time.time()
         self.args = args
+        # --- NEW: Hotfix to ensure compatibility with newer DataLoaders ---
+        if not hasattr(self.args, 'sep_special_token'):
+            self.args.sep_special_token = 0
+        # -----------------------------------------------------------------
+        
         self.world_size, self.rank = world_size, rank
         self.device = torch.device(f"cuda:{rank}" if torch.cuda.is_available() else "cpu")
         if self.rank == 0:
@@ -222,19 +227,24 @@ class Trainer:
                         "optimizer":  self.optimizer.state_dict(),
                         "scheduler": self.scheduler.state_dict(),
                         "config": self.args,
-                        "phn2num": self.train_loader.dataset.phn2num
+                        "phn2num": self.train_loader.dataset.phn2num,
+                        "step": self.progress['step'] # Store current step inside the checkpoint
                     },save_path
                 )
                 logging.info(f"save *best* models at {save_path} at global step {self.progress['step']}")
             self._save_progress()
-            save_path = os.path.join(self.args.exp_dir,"bundle.pth")
+            step_num = self.progress['step']
+            checkpoint_name = f"bundle_step_{step_num}.pth"
+            save_path = os.path.join(self.args.exp_dir, checkpoint_name)
+            # save_path = os.path.join(self.args.exp_dir,"bundle.pth")
             torch.save(
                 {
                     "model": self.model.module.state_dict(),
                     "optimizer":  self.optimizer.state_dict(),
                     "scheduler": self.scheduler.state_dict(),
                     "config": self.args,
-                    "phn2num": self.train_loader.dataset.phn2num
+                    "phn2num": self.train_loader.dataset.phn2num,
+                    "step": self.progress['step'] # Store current step inside the checkpoint
                     },save_path
             )
             logging.info(f"save models, indices, acc and other statistics at {save_path} and {self.args.exp_dir}/progress.pkl at global step {self.progress['step']}")

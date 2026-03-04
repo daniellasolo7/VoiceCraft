@@ -2,13 +2,19 @@
 # Hebrew Fine-tuning script for a single GPU
 
 # conda activate voicecraft_linux
-export CUDA_VISIBLE_DEVICES=0
-export WORLD_SIZE=1
+# export CUDA_VISIBLE_DEVICES=0
+# export WORLD_SIZE=1
+
+export DATASET_DIR="/kaggle/input/voicecraft-hebrew-fleurs/voicecraft_data"
+export EXP_ROOT="/kaggle/working/exp"
+export WORLD_SIZE=1 # בקאגל לרוב נשתמש ב-1 (אלא אם הגדרת Multi-GPU T4 x2)
 
 # Paths - Update these to your actual paths!
 dataset=hebrew_fleurs
+mkdir -p ./logs/${dataset}
+
 exp_root="./experiments"
-exp_name="hebrew_v1_330M_200" # Recommended to use 330M architecture for stability
+exp_name="hebrew_v1_330M_kaggle" # Recommended to use 330M architecture for stability
 dataset_dir="./voicecraft_data" # The folder containing 'phonemes', 'manifest', and Encodec codes
 load_model_from="./pretrained_models/giga330M.pth"
 
@@ -24,7 +30,7 @@ torchrun --nnodes=1 --rdzv-backend=c10d --rdzv-endpoint=localhost:41977 --nproc_
 --num_decoder_layers 8 \
 --text_vocab_size 100 \
 --text_pad_token 100 \
---num_steps 2000 \
+--num_steps 5000 \
 --lr 0.00001 \
 --batch_size 1 \
 --gradient_accumulation_steps 8 \
@@ -38,7 +44,6 @@ torchrun --nnodes=1 --rdzv-backend=c10d --rdzv-endpoint=localhost:41977 --nproc_
 --d_model 2048 \
 --nhead 16 \
 --reduced_eog 1 \
---lr 0.00001 \
 --warmup_fraction 0.1 \
 --early_stop_threshold 0.001 \
 --early_stop_step 200 \

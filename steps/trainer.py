@@ -234,9 +234,9 @@ class Trainer:
                 logging.info(f"save *best* models at {save_path} at global step {self.progress['step']}")
             self._save_progress()
             step_num = self.progress['step']
-            checkpoint_name = f"bundle_step_{step_num}.pth"
-            save_path = os.path.join(self.args.exp_dir, checkpoint_name)
-            # save_path = os.path.join(self.args.exp_dir,"bundle.pth")
+            # checkpoint_name = f"bundle_step_{step_num}.pth"
+            # save_path = os.path.join(self.args.exp_dir, checkpoint_name)
+            save_path = os.path.join(self.args.exp_dir,"bundle.pth")
             torch.save(
                 {
                     "model": self.model.module.state_dict(),

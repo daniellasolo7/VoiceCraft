@@ -398,9 +398,46 @@ class Trainer:
             optim_states = None
             scheduler_states = None
 
+        # if self.args.load_model_from != None and self.progress['step'] <= 1:
+        #     sd = torch.load(self.args.load_model_from, map_location="cpu")['model']
+        #     model.load_state_dict(sd)
+        #     del sd
+
+        # Check if a pre-trained model path is provided and it's the beginning of training
         if self.args.load_model_from != None and self.progress['step'] <= 1:
+            # Load the checkpoint dictionary from the specified path
             sd = torch.load(self.args.load_model_from, map_location="cpu")['model']
-            model.load_state_dict(sd)
+            
+            # Get the current model's state dictionary to compare shapes
+            curr_sd = model.state_dict()
+            
+            # Define the key for the text embedding weights
+            embed_key = "text_embedding.word_embeddings.weight"
+            
+            # Check for size mismatch in text embeddings (e.g., when adding Niqqud/new tokens)
+            if embed_key in sd and sd[embed_key].shape != curr_sd[embed_key].shape:
+                print(f"INFO: Shape mismatch detected for {embed_key}.")
+                print(f"Target shape: {curr_sd[embed_key].shape}, Source shape: {sd[embed_key].shape}")
+                
+                # Create a new embedding matrix based on current initialization (random)
+                # This ensures new tokens (Niqqud) start with random weights
+                new_embed = curr_sd[embed_key].clone()
+                
+                # Copy only the existing overlapping tokens from the checkpoint
+                # Assuming the first N tokens in the new vocab match the original order
+                n_old_tokens = sd[embed_key].shape[0]
+                new_embed[:n_old_tokens, :] = sd[embed_key]
+                
+                # Update the loaded state dict with the resized/merged embedding matrix
+                sd[embed_key] = new_embed
+                print(f"Successfully merged {n_old_tokens} existing tokens into the new embedding layer.")
+            
+            # Load the state dict into the model. 
+            # strict=False allows loading even if some non-critical keys are missing or mismatched.
+            model.load_state_dict(sd, strict=False)
+            print("Successfully loaded pre-trained weights with partial embedding support.")
+            
+            # Free up memory
             del sd
         
         if self.args.optimizer_name == "ScaledAdam":

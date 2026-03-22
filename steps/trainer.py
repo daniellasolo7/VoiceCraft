@@ -13,6 +13,7 @@ from torch.utils.data.distributed import DistributedSampler
 import logging
 from data import gigaspeech
 from models import voicecraft
+import wandb
 
 from .trainer_utils import DistributedDynamicBatchSampler, StatefulDistributedSampler, AverageMeter, print_model_info
 from .optim import ScaledAdam, Eden
@@ -179,10 +180,23 @@ class Trainer:
                         log_out['total_step'] = f"{self.progress['step']}/{self.args.num_steps}"
                         log_out['lr'] = f"{cur_lr:.7f}"
                         log_out['ntokens'] = f"{sum_ntoken}"
+
+                        wandb_metrics = {
+                            "train/loss": self.meters['train_loss'].avg,
+                            "train/lr": cur_lr,
+                            "train/step": self.progress['step']
+                        }
+
                         for key in self.meters:
                             if self.meters[key].val != 0 or self.meters[key].avg != 0:
                                 log_out[key] = f"{self.meters[key].val:.4f} ({self.meters[key].avg:.4f})" if isinstance(self.meters[key].val, float) else f"{self.meters[key].val}"
+                                if isinstance(self.meters[key].avg, (int, float)):
+                                    wandb_metrics[f"train/{key}"] = self.meters[key].avg
                         logging.info(log_out)
+                        
+                        import wandb
+                        wandb.log(wandb_metrics, step=self.progress['step'])
+
                         if np.isnan(self.meters['train_loss'].avg):
                             logging.warning("training diverged...")
                             raise RuntimeError("training diverged...")

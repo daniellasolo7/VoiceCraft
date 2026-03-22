@@ -6,6 +6,7 @@ import logging
 import torch.distributed as dist
 from config import MyParser
 from steps import trainer
+import wandb
 
 
 if __name__ == "__main__":
@@ -36,7 +37,8 @@ if __name__ == "__main__":
     else:
         with open("%s/args.pkl" % args.exp_dir, "wb") as f:
             pickle.dump(args, f)
-
+    
+    wandb.init(project="voicecraft_hebrew", name=args.exp_dir or "heb_run", config=args)
     dist.init_process_group(backend='nccl', init_method='env://')
     rank = dist.get_rank()
     world_size = dist.get_world_size()
